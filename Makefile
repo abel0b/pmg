@@ -14,7 +14,7 @@ DEPENDS := $(SOURCES:src/%.c=deps/%.d)
 
 MAKEFILES := Makefile
 
-CFLAGS += -O3 -Wall -Wno-unused-function  #-march=native
+CFLAGS += -Wall -Wno-unused-function  #-march=native
 CFLAGS += -I./include
 
 ifdef ENABLE_MPI
@@ -24,7 +24,7 @@ else
 CC=gcc
 endif
 
-CFLAGS += -fopenmp
+CFLAGS += -fopenmp -g -ggdb
 LDFLAGS += -fopenmp -lm
 
 CFLAGS += -DCL_SILENCE_DEPRECATION
@@ -33,8 +33,11 @@ CFLAGS += -DCL_SILENCE_DEPRECATION
 CFLAGS += -DENABLE_VECTO -DVEC_SIZE=8 -mavx2 -mfma
 #CFLAGS += -DENABLE_VECTO -DVEC_SIZE=4 -msse4 -mfma
 
+ifdef CCOPTI
+CFLAGS += -O3
+endif
 
-ifndef NOSDL 
+ifndef NOSDL
 CFLAGS += $(shell pkg-config SDL2_image --cflags)
 LDLIBS += $(shell pkg-config SDL2_image --libs)
 # Optionnal
@@ -78,5 +81,5 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 .PHONY: clean
-clean: 
+clean:
 	rm -f $(PROGRAM) obj/*.o deps/*.d lib/*.a

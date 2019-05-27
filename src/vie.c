@@ -35,9 +35,9 @@ void vie_finalize() {
   free(next_changes);
 }
 
-void vie_refresh_img() {
-
-}
+// void vie_refresh_img() {
+//
+// }
 
 char need_compute(int tilex, int tiley) {
   tilex++;
@@ -45,30 +45,28 @@ char need_compute(int tilex, int tiley) {
   return changes[tilex][tiley] || changes[tilex-1][tiley-1] || changes[tilex-1][tiley] || changes[tilex-1][tiley+1] || changes[tilex][tiley-1] || changes[tilex][tiley+1] || changes[tilex+1][tiley-1] || changes[tilex+1][tiley] || changes[tilex+1][tiley+1];
 }
 
+unsigned rules_change[2][9] = {
+    {0,0,0,1,0,0,0,0,0},
+    {1,1,0,0,1,1,1,1,1},
+};
+
+unsigned rules_image[2][9] = {
+    {0,0,0,0xFFFF00FF,0,0,0,0,0},
+    {0,0,0xFFFF00FF,0xFFFF00FF,0,0,0,0,0},
+};
+
 static int compute_new_state (int y, int x)
 {
   unsigned n      = 0;
   unsigned change = 0;
+  unsigned alive = 0;
 
   if (x > 0 && x < DIM - 1 && y > 0 && y < DIM - 1) {
     n = (cur_img(y-1, x-1) != 0) + (cur_img(y-1, x) != 0) + (cur_img(y-1, x+1) != 0) + (cur_img(y, x-1) != 0) + (cur_img(y, x+1) != 0) + (cur_img(y+1, x-1) != 0) + (cur_img(y+1, x) != 0) + (cur_img(y+1, x+1) != 0);
 
-    if (cur_img (y, x) != 0) {
-      if (n == 2 || n == 3)
-        n = 0xFFFF00FF;
-      else {
-        n      = 0;
-        change = 1;
-      }
-    } else {
-      if (n == 3) {
-        n      = 0xFFFF00FF;
-        change = 1;
-      } else
-        n = 0;
-    }
-
-    next_img (y, x) = n;
+    alive = cur_img (y, x) != 0;
+    change = rules_change[alive][n];
+    next_img (y, x) = rules_image[alive][n];
   }
 
   return change;
@@ -140,11 +138,9 @@ unsigned vie_compute_seq_opti (unsigned nb_iter)
       }
     }
 
-    for (int i=0; i<GRAIN; i++) {
-        for(int j=0; j<GRAIN; j++) {
-          changes[i+1][j+1] =  next_changes[i+1][j+1];
-        }
-    }
+    void * tmp_change = changes;
+    changes = next_changes;
+    next_changes = tmp_change;
 
     swap_images ();
   }
@@ -200,10 +196,9 @@ unsigned vie_compute_omp_opti (unsigned nb_iter)
       }
     }
 
-    #pragma omp parallel for
-    for (int i=0; i<GRAIN; i++) {
-        memcpy(changes[i+1] + sizeof(char), next_changes[i+1] + sizeof(char), GRAIN);
-    }
+    void * tmp_change = changes;
+    changes = next_changes;
+    next_changes = tmp_change;
     swap_images ();
   }
 
@@ -295,27 +290,22 @@ unsigned vie_compute_ocl (unsigned nb_iter)
   size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
   size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation
   cl_int err;
-  // unsigned max_iter = MAX_ITERATIONS;
-  //
-  // for (unsigned it = 1; it <= nb_iter; it++) {
-  //   // Set kernel arguments
-  //   //
-  //   err = 0;
-  //   err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
-  //   err |= clSetKernelArg (compute_kernel, 1, sizeof (float), &leftX);
-  //   err |= clSetKernelArg (compute_kernel, 2, sizeof (float), &xstep);
-  //   err |= clSetKernelArg (compute_kernel, 3, sizeof (float), &topY);
-  //   err |= clSetKernelArg (compute_kernel, 4, sizeof (float), &ystep);
-  //   err |= clSetKernelArg (compute_kernel, 5, sizeof (unsigned), &max_iter);
-  //
-  //   check (err, "Failed to set kernel arguments");
-  //
-  //   err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
-  //                                 0, NULL, NULL);
-  //   check (err, "Failed to execute kernel");
-  //
-  //   zoom ();
-  // }
+
+  for (unsigned it = 1; it <= nb_iter; it++) {
+    // Set kernel arguments
+    //
+    err = 0;
+    err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
+    err |= clSetKernelArg (compute_kernel, 1, sizeof (Uint32 *), image);
+    err |= clSetKernelArg (compute_kernel, 2, sizeof (Uint32 *), alt_image);
+
+    check (err, "Failed to set kernel arguments");
+
+    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
+                                  0, NULL, NULL);
+    check (err, "Failed to execute kernel");
+
+  }
 
   return 0;
 }
