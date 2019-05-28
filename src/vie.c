@@ -296,8 +296,6 @@ unsigned vie_compute_ocl (unsigned nb_iter)
     //
     err = 0;
     err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
-    err |= clSetKernelArg (compute_kernel, 1, sizeof (Uint32 *), image);
-    err |= clSetKernelArg (compute_kernel, 2, sizeof (Uint32 *), alt_image);
 
     check (err, "Failed to set kernel arguments");
 
