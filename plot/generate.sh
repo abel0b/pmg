@@ -18,7 +18,7 @@ function plot_compare {
     do
         echo -n "$index \"$variant\" "
         cmd=$(command $kernel $variant $size $iter)
-        $cmd 2>&1 > /dev/null
+        $cmd |& grep -o "[0-9]*\.[0-9]*"
         index=$((index+1))
     done
 }
