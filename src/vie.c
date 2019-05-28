@@ -39,7 +39,7 @@ void vie_init() {
 void vie_init_ocl() {
     cl_int err = 0;
     err = clEnqueueWriteBuffer (queue, changes_buffer, CL_TRUE, 0, sizeof (bool) * (GRAIN+2) * (GRAIN+2), changes, 0, NULL, NULL);
-    check (err, "Failed to write to cur_buffer");
+    check (err, "Failed to write to changes_buffer");
 }
 
 void vie_finalize() {
@@ -291,30 +291,6 @@ void vie_draw (char *param)
 }
 
 unsigned vie_compute_ocl (unsigned nb_iter)
-{
-  size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
-  size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation
-  cl_int err;
-
-  for (unsigned it = 1; it <= nb_iter; it++) {
-    // Set kernel arguments
-    //
-    err = 0;
-    err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
-    err |= clSetKernelArg(compute_kernel, 1, sizeof(cl_mem), &next_buffer);
-
-    check (err, "Failed to set kernel arguments");
-
-    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
-                                  0, NULL, NULL);
-    check (err, "Failed to execute kernel");
-
-  }
-
-  return 0;
-}
-
-unsigned vie_compute_ocl_opti (unsigned nb_iter)
 {
   size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
   size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation

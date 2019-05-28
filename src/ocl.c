@@ -124,9 +124,8 @@ void ocl_init (void)
     TILEY = TILEX;
 
   str = getenv ("KERNEL");
-  str2 = getenv("VERSION");
   if (str != NULL) {
-      sprintf(kernel_name, "%s_%s", str, str2);
+      kernel_name = str;
   }
 
   if (SIZE > DIM)
@@ -286,7 +285,7 @@ void ocl_init (void)
     exit_with_error ("Failed to allocate output buffer");
 
   changes_buffer = clCreateBuffer (context, CL_MEM_READ_WRITE,
-                                sizeof (char) * (SIZE+1) * (SIZE+1), NULL, NULL);
+                                sizeof (char) * (GRAIN+2) * (GRAIN+2), NULL, NULL);
   if (!changes_buffer)
     exit_with_error ("Failed to allocate output buffer");
 
