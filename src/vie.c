@@ -38,7 +38,7 @@ void vie_init() {
 
 void vie_init_ocl() {
     cl_int err = 0;
-    err = clEnqueueWriteBuffer (queue, changes_buffer, CL_TRUE, 0, sizeof (bool) * (GRAIN+2) * (GRAIN+2), image, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer (queue, changes_buffer, CL_TRUE, 0, sizeof (bool) * (GRAIN+2) * (GRAIN+2), changes, 0, NULL, NULL);
     check (err, "Failed to write to cur_buffer");
 }
 

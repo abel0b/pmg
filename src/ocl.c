@@ -93,6 +93,7 @@ void ocl_init (void)
   cl_device_type dtype;
   cl_uint nb_devices   = 0;
   char *str            = NULL;
+  char *str2;
   unsigned platform_no = 0;
   unsigned dev         = 0;
 
@@ -123,8 +124,10 @@ void ocl_init (void)
     TILEY = TILEX;
 
   str = getenv ("KERNEL");
-  if (str != NULL)
-    kernel_name = str;
+  str2 = getenv("VERSION");
+  if (str != NULL) {
+      sprintf(kernel_name, "%s_%s", str, str2);
+  }
 
   if (SIZE > DIM)
     exit_with_error ("SIZE (%d) cannot exceed DIM (%d)", SIZE, DIM);
@@ -283,7 +286,7 @@ void ocl_init (void)
     exit_with_error ("Failed to allocate output buffer");
 
   changes_buffer = clCreateBuffer (context, CL_MEM_READ_WRITE,
-                                sizeof (unsigned) * DIM * DIM, NULL, NULL);
+                                sizeof (char) * (SIZE+1) * (SIZE+1), NULL, NULL);
   if (!changes_buffer)
     exit_with_error ("Failed to allocate output buffer");
 
