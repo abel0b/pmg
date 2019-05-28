@@ -185,6 +185,7 @@ static void filter_args (int *argc, char *argv[])
       }
       (*argc)--;
       argv++;
+      setenv ("VERSION", *argv, 1);
       if (!strcmp (*argv, "ocl"))
         opencl_used = 1;
       version = *argv;
