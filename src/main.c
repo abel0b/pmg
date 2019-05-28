@@ -312,6 +312,7 @@ int main (int argc, char **argv)
 
   if (opencl_used) {
     ocl_init ();
+    vie_init_ocl_ok();
     ocl_send_image (image);
   }
 
