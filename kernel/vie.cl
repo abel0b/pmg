@@ -23,14 +23,13 @@ __kernel void vie(__global unsigned * image, __global unsigned * alt_image, __gl
     unsigned tilex = get_local_id(0);
     unsigned tiley = get_local_id(1);
 
-    #ifdef OPTI
-    if (change(tiley, tilex)) {
-    #endif
+    int need_compute = cur_changes(tiley, tilex) | cur_changes(tiley-1, tilex-1) | cur_changes(tiley, tilex-1) | cur_changes(tiley+1, tilex-1) | cur_changes(tiley-1, tilex) | cur_changes(tiley+1, tilex) | cur_changes(tiley-1, tilex+1) | cur_changes(tiley, tilex+1) | cur_changes(tiley+1, tilex+1);
+
+    if (need_compute) {
+        barrier(CLK_LOCAL_MEM_FENCE);
         unsigned n = (cur_img(y-1, x-1) != 0) + (cur_img(y-1, x) != 0) + (cur_img(y-1, x+1) != 0) + (cur_img(y, x-1) != 0) + (cur_img(y, x+1) != 0) + (cur_img(y+1, x-1) != 0) + (cur_img(y+1, x) != 0) + (cur_img(y+1, x+1) != 0);
         unsigned alive = cur_img (y, x) != 0;
         next_img (y, x) = rules[alive][n];
         change(tiley,tilex) = change(tiley,tilex) | rules_change[alive][n];
-    #ifdef OPTI
     }
-    #endif
 }
