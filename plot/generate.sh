@@ -4,7 +4,7 @@ set -e
 
 size=1024
 kernel=vie
-variants=(seq seq_tile seq_opti omp omp_tile omp_opti ocl)
+variants=(seq seq_tile seq_opti omp omp_tile omp_opti ocl ocl_opti)
 iter=30
 export PLATFORM=1
 

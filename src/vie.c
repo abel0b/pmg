@@ -11,39 +11,44 @@
 #include <omp.h>
 #include <string.h>
 
-char ** changes = NULL;
-char ** next_changes = NULL;
+char * changes = NULL;
+char * alt_changes = NULL;
+
+#define change_cell(i, l, c) ((i) + (l) * (GRAIN+2) + (c))
+#define cur_changes(y,x) (*(change_cell(changes, (y+1), (x+1))))
+#define next_changes(y,x) (*(change_cell(alt_changes, (y+1), (x+1))))
+
+typedef unsigned cell_t;
 
 void vie_init() {
-  changes = malloc((GRAIN+2) * sizeof(bool *));
-  next_changes = malloc((GRAIN+2) * sizeof(bool *));
+  changes = malloc((GRAIN+2) * (GRAIN+2) * sizeof(bool));
+  alt_changes = malloc((GRAIN+2) * (GRAIN+2) * sizeof(bool));
+
   for (int i=0; i<(GRAIN+2); i++) {
-    changes[i] = malloc((GRAIN+2) * sizeof(bool));
-    next_changes[i] = malloc((GRAIN+2) * sizeof(bool));
     if (i == 0 || i == GRAIN+1) {
-      memset(changes[i], 0, (GRAIN+2));
+      memset(changes + i*(GRAIN+2), 0, (GRAIN+2));
     }
     else {
-      memset(changes[i] + sizeof(char), 1, GRAIN);
-      changes[i][0] = 0;
-      changes[i][GRAIN+1] = 0;
+      memset(changes + i*(GRAIN+2) + sizeof(char), 1, GRAIN);
+      cur_changes(i, 0) = 0;
+      cur_changes(i, GRAIN+1) = 0;
     }
   }
 }
 
-void vie_finalize() {
-  free(changes);
-  free(next_changes);
+void vie_init_ocl() {
+    cl_int err = 0;
+    err = clEnqueueWriteBuffer (queue, changes_buffer, CL_TRUE, 0, sizeof (bool) * (GRAIN+2) * (GRAIN+2), image, 0, NULL, NULL);
+    check (err, "Failed to write to cur_buffer");
 }
 
-// void vie_refresh_img() {
-//
-// }
+void vie_finalize() {
+  free(changes);
+  free(alt_changes);
+}
 
 char need_compute(int tilex, int tiley) {
-  tilex++;
-  tiley++;
-  return changes[tilex][tiley] || changes[tilex-1][tiley-1] || changes[tilex-1][tiley] || changes[tilex-1][tiley+1] || changes[tilex][tiley-1] || changes[tilex][tiley+1] || changes[tilex+1][tiley-1] || changes[tilex+1][tiley] || changes[tilex+1][tiley+1];
+  return cur_changes(tiley, tilex) || cur_changes(tiley-1, tilex-1) || cur_changes(tiley, tilex-1) || cur_changes(tiley+1, tilex-1) || cur_changes(tiley-1, tilex) || cur_changes(tiley+1, tilex) || cur_changes(tiley-1, tilex+1) || cur_changes(tiley, tilex+1) || cur_changes(tiley+1, tilex+1);
 }
 
 unsigned rules_change[2][9] = {
@@ -131,17 +136,17 @@ unsigned vie_compute_seq_tile (unsigned nb_iter)
 unsigned vie_compute_seq_opti (unsigned nb_iter)
 {
   for (unsigned it = 1; it <= nb_iter; it++) {
-    for (int tilex=0; tilex<GRAIN; tilex++) {
-      for (int tiley=0; tiley<GRAIN; tiley++) {
+    for (int tiley=0; tiley<GRAIN; tiley++) {
+      for (int tilex=0; tilex<GRAIN; tilex++) {
         if (need_compute(tilex, tiley)) {
-          next_changes[tilex+1][tiley+1] = traiter_tuile (tilex*(DIM / GRAIN), tiley*(DIM / GRAIN), (tilex+1)*(DIM / GRAIN)-1, (tiley+1)*(DIM / GRAIN)-1)? 1 : 0;
+          next_changes(tiley,tilex) = traiter_tuile (tilex*(DIM / GRAIN), tiley*(DIM / GRAIN), (tilex+1)*(DIM / GRAIN)-1, (tiley+1)*(DIM / GRAIN)-1)? true : false;
         }
       }
     }
 
     void * tmp_change = changes;
-    changes = next_changes;
-    next_changes = tmp_change;
+    changes = alt_changes;
+    alt_changes = tmp_change;
 
     swap_images ();
   }
@@ -189,17 +194,17 @@ unsigned vie_compute_omp_opti (unsigned nb_iter)
 {
   for (unsigned it = 1; it <= nb_iter; it++) {
     #pragma omp parallel for collapse(2)
-    for (int tilex=0; tilex<GRAIN; tilex++) {
-      for (int tiley=0; tiley<GRAIN; tiley++) {
+    for (int tiley=0; tiley<GRAIN; tiley++) {
+      for (int tilex=0; tilex<GRAIN; tilex++) {
         if (need_compute(tilex, tiley)) {
-          next_changes[tilex+1][tiley+1] = (traiter_tuile (tilex*(DIM / GRAIN), tiley*(DIM / GRAIN), (tilex+1)*(DIM / GRAIN)-1, (tiley+1)*(DIM / GRAIN)-1))? 1 : 0;
+          next_changes(tiley, tilex) = (traiter_tuile (tilex*(DIM / GRAIN), tiley*(DIM / GRAIN), (tilex+1)*(DIM / GRAIN)-1, (tiley+1)*(DIM / GRAIN)-1))? 1 : 0;
         }
       }
     }
 
     void * tmp_change = changes;
-    changes = next_changes;
-    next_changes = tmp_change;
+    changes = alt_changes;
+    alt_changes = tmp_change;
     swap_images ();
   }
 
@@ -237,20 +242,19 @@ unsigned vie_compute_omp_task_opti (unsigned nb_iter)
   for (unsigned it = 1; it <= nb_iter; it++) {
     #pragma omp parallel
     #pragma omp single
-    for (int tilex=0; tilex<GRAIN; tilex++) {
-      for (int tiley=0; tiley<GRAIN; tiley++) {
+    for (int tiley=0; tiley<GRAIN; tiley++) {
+      for (int tilex=0; tilex<GRAIN; tilex++) {
         #pragma omp task
         if (need_compute(tilex, tiley)) {
-          next_changes[tilex+1][tiley+1] = (traiter_tuile (tilex*(DIM / GRAIN), tiley*(DIM / GRAIN), (tilex+1)*(DIM / GRAIN)-1, (tiley+1)*(DIM / GRAIN)-1))? 1 : 0;
+          next_changes(tiley,tilex) = (traiter_tuile (tilex*(DIM / GRAIN), tiley*(DIM / GRAIN), (tilex+1)*(DIM / GRAIN)-1, (tiley+1)*(DIM / GRAIN)-1))? 1 : 0;
         }
       }
     }
 
 
-    #pragma omp parallel for
-    for (int i=0; i<GRAIN; i++) {
-        memcpy(changes[i+1] + sizeof(char), next_changes[i+1] + sizeof(char), GRAIN);
-    }
+    void * tmp_change = changes;
+    changes = alt_changes;
+    alt_changes = tmp_change;
     swap_images ();
   }
 
@@ -289,9 +293,8 @@ void vie_draw (char *param)
 unsigned vie_compute_ocl (unsigned nb_iter)
 {
   size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
-  //size_t local[2]  = {NULL, NULL}; // local domain size for our calculation
+  size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation
   cl_int err;
-  int a;
 
   for (unsigned it = 1; it <= nb_iter; it++) {
     // Set kernel arguments
@@ -299,11 +302,35 @@ unsigned vie_compute_ocl (unsigned nb_iter)
     err = 0;
     err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
     err |= clSetKernelArg(compute_kernel, 1, sizeof(cl_mem), &next_buffer);
-    //err |= clSetKernelArg (compute_kernel, 2, sizeof (unsigned**), &rules_image);
 
     check (err, "Failed to set kernel arguments");
 
-    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, NULL,
+    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
+                                  0, NULL, NULL);
+    check (err, "Failed to execute kernel");
+
+  }
+
+  return 0;
+}
+
+unsigned vie_compute_ocl_opti (unsigned nb_iter)
+{
+  size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
+  size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation
+  cl_int err;
+
+  for (unsigned it = 1; it <= nb_iter; it++) {
+    // Set kernel arguments
+    //
+    err = 0;
+    err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
+    err |= clSetKernelArg(compute_kernel, 1, sizeof(cl_mem), &next_buffer);
+    err |= clSetKernelArg(compute_kernel, 2, sizeof(cl_mem), &changes_buffer);
+
+    check (err, "Failed to set kernel arguments");
+
+    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
                                   0, NULL, NULL);
     check (err, "Failed to execute kernel");
 

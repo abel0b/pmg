@@ -26,7 +26,7 @@ cl_context context;
 cl_kernel update_kernel;
 cl_kernel compute_kernel;
 cl_command_queue queue;
-cl_mem tex_buffer, cur_buffer, next_buffer;
+cl_mem tex_buffer, cur_buffer, next_buffer, changes_buffer;
 
 static size_t file_size (const char *filename)
 {
@@ -280,6 +280,11 @@ void ocl_init (void)
   next_buffer = clCreateBuffer (context, CL_MEM_READ_WRITE,
                                 sizeof (unsigned) * DIM * DIM, NULL, NULL);
   if (!next_buffer)
+    exit_with_error ("Failed to allocate output buffer");
+
+  changes_buffer = clCreateBuffer (context, CL_MEM_READ_WRITE,
+                                sizeof (unsigned) * DIM * DIM, NULL, NULL);
+  if (!changes_buffer)
     exit_with_error ("Failed to allocate output buffer");
 
   printf ("Using %dx%d workitems grouped in %dx%d tiles \n", SIZE, SIZE, TILEX,
