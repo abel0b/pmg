@@ -4,7 +4,12 @@
 #define cur_img(y, x) (*img_cell (image, (y), (x)))
 #define next_img(y, x) (*img_cell (alt_image, (y), (x)))
 
-__kernel void vie(__global Uint32 * image, __global Uint32 * alt_image, unsigned rules[2][9]) {
+__constant unsigned rules[2][9] = {
+    {0,0,0,0xFFFF00FF,0,0,0,0,0},
+    {0,0,0xFFFF00FF,0xFFFF00FF,0,0,0,0,0},
+};
+
+__kernel void vie(__global unsigned * image, __global unsigned * alt_image) {
     unsigned x = get_global_id(0);
     unsigned y = get_global_id(1);
 
