@@ -6,6 +6,7 @@ size=1024
 kernel=vie
 variants=(seq seq_tile seq_opti omp omp_tile omp_opti ocl)
 iter=30
+export PLATFORM=1
 
 function command {
     echo "./2Dcomp -k $1 -v $2 -s $3 -i $4 -n"
