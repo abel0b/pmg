@@ -18,7 +18,7 @@ unsigned vsync          = 1;
 unsigned do_first_touch = 0;
 char *draw_param        = NULL;
 
-Uint32 *restrict image = NULL, *restrict alt_image = NULL;
+cell_t *restrict image = NULL, *restrict alt_image = NULL;
 unsigned DIM = 0;
 
 #ifdef NOSDL
@@ -28,8 +28,8 @@ void graphics_init ()
 {
   unsigned dim = DIM ? DIM : DEFAULT_DIM;
   DIM          = dim;
-  image        = malloc (dim * dim * sizeof (Uint32));
-  alt_image    = malloc (dim * dim * sizeof (Uint32));
+  image        = malloc (dim * dim * sizeof (cell_t));
+  alt_image    = malloc (dim * dim * sizeof (cell_t));
 
   if (do_first_touch) {
     if (the_first_touch != NULL) {
@@ -44,7 +44,7 @@ void graphics_init ()
   if (the_draw != NULL)
     the_draw (draw_param);
   else
-    memset (image, 0, DIM * DIM * sizeof (Uint32));
+    memset (image, 0, DIM * DIM * sizeof (cell_t));
 }
 
 void graphics_share_texture_buffers (void)
@@ -92,8 +92,8 @@ static void graphics_create_surface (unsigned dim)
   amask = 0x000000ff;
 
   DIM       = dim;
-  image     = malloc (dim * dim * sizeof (Uint32));
-  alt_image = malloc (dim * dim * sizeof (Uint32));
+  image     = malloc (dim * dim * sizeof (cell_t));
+  alt_image = malloc (dim * dim * sizeof (cell_t));
 
   if (do_first_touch) {
     if (the_first_touch != NULL) {
@@ -108,7 +108,7 @@ static void graphics_create_surface (unsigned dim)
   //  return;
 
   surface = SDL_CreateRGBSurfaceFrom (
-      image, dim, dim, 32, dim * sizeof (Uint32), rmask, gmask, bmask, amask);
+      image, dim, dim, 32, dim * sizeof (cell_t), rmask, gmask, bmask, amask);
   if (surface == NULL)
     exit_with_error ("SDL_CreateRGBSurfaceFrom () failed: %s", SDL_GetError ());
 }
@@ -197,13 +197,13 @@ void graphics_init ()
     // Note: First touch is performed inside graphics_create_surface
     graphics_create_surface (size);
 
-    memset (image, 0, DIM * DIM * sizeof (Uint32));
+    memset (image, 0, DIM * DIM * sizeof (cell_t));
   } else
     graphics_load_surface (pngfile);
 
   graphics_image_init ();
 
-  memcpy (alt_image, image, DIM * DIM * sizeof (Uint32));
+  memcpy (alt_image, image, DIM * DIM * sizeof (cell_t));
 
 #ifdef ENABLE_MONITORING
   if (do_monitoring) {

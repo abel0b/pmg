@@ -19,9 +19,11 @@ void graphics_dump_image_to_file (char *filename);
 void graphics_clean (void);
 int graphics_display_enabled (void);
 
-extern Uint32 *restrict image, *restrict alt_image;
+typedef Uint32 cell_t;
 
-static inline Uint32 *img_cell (Uint32 *i, int l, int c)
+extern cell_t *restrict image, *restrict alt_image;
+
+static inline cell_t *img_cell (Uint32 *i, int l, int c)
 {
   return i + l * DIM + c;
 }
@@ -31,7 +33,7 @@ static inline Uint32 *img_cell (Uint32 *i, int l, int c)
 
 static inline void swap_images (void)
 {
-  Uint32 *tmp = image;
+  cell_t *tmp = image;
 
   image     = alt_image;
   alt_image = tmp;

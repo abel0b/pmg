@@ -291,6 +291,8 @@ void ocl_init (void)
 
   printf ("Using %dx%d workitems grouped in %dx%d tiles \n", SIZE, SIZE, TILEX,
           TILEY);
+
+    vie_init_changes_buffer();
 }
 
 void ocl_map_textures (GLuint texid)

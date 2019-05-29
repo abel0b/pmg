@@ -36,7 +36,7 @@ void vie_init() {
   }
 }
 
-void vie_init_ocl_ok() {
+void vie_init_changes_buffer() {
     cl_int err = 0;
     err = clEnqueueWriteBuffer (queue, changes_buffer, CL_TRUE, 0, sizeof (char) * (GRAIN+2) * (GRAIN+2), changes, 0, NULL, NULL);
     check (err, "Failed to write to changes_buffer");
@@ -56,23 +56,23 @@ unsigned rules_change[2][9] = {
     {1,1,0,0,1,1,1,1,1},
 };
 
-unsigned rules_image[2][9] = {
+cell_t rules_image[2][9] = {
     {0,0,0,0xFFFF00FF,0,0,0,0,0},
     {0,0,0xFFFF00FF,0xFFFF00FF,0,0,0,0,0},
 };
 
 static int compute_new_state (int y, int x)
 {
-  unsigned n      = 0;
   unsigned change = 0;
-  unsigned alive = 0;
 
   if (x > 0 && x < DIM - 1 && y > 0 && y < DIM - 1) {
-    n = (cur_img(y-1, x-1) != 0) + (cur_img(y-1, x) != 0) + (cur_img(y-1, x+1) != 0) + (cur_img(y, x-1) != 0) + (cur_img(y, x+1) != 0) + (cur_img(y+1, x-1) != 0) + (cur_img(y+1, x) != 0) + (cur_img(y+1, x+1) != 0);
+      unsigned alive = 0;
+      unsigned n = 0;
+      n = (cur_img(y-1, x-1) != 0) + (cur_img(y-1, x) != 0) + (cur_img(y-1, x+1) != 0) + (cur_img(y, x-1) != 0) + (cur_img(y, x+1) != 0) + (cur_img(y+1, x-1) != 0) + (cur_img(y+1, x) != 0) + (cur_img(y+1, x+1) != 0);
 
-    alive = cur_img (y, x) != 0;
-    change = rules_change[alive][n];
-    next_img (y, x) = rules_image[alive][n];
+      alive = cur_img (y, x) != 0;
+      change = rules_change[alive][n];
+      next_img (y, x) = rules_image[alive][n];
   }
 
   return change;
@@ -261,6 +261,35 @@ unsigned vie_compute_omp_task_opti (unsigned nb_iter)
   return 0;
 }
 
+unsigned vie_compute_ocl (unsigned nb_iter)
+{
+  size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
+  size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation
+  cl_int err;
+
+  for (unsigned it = 1; it <= nb_iter; it++) {
+    // Set kernel arguments
+    //
+    err = 0;
+    err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
+    err |= clSetKernelArg(compute_kernel, 1, sizeof(cl_mem), &next_buffer);
+    err |= clSetKernelArg(compute_kernel, 2, sizeof(cl_mem), &changes_buffer);
+
+    check (err, "Failed to set kernel arguments");
+
+    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
+                                  0, NULL, NULL);
+    check (err, "Failed to execute kernel");
+
+    void * tmp_change = changes;
+    changes = alt_changes;
+    alt_changes = tmp_change;
+    swap_images ();
+  }
+
+  return 0;
+}
+
 
 ///////////////////////////// Configuration initiale
 
@@ -288,31 +317,6 @@ void vie_draw (char *param)
   }
 
   f ();
-}
-
-unsigned vie_compute_ocl (unsigned nb_iter)
-{
-  size_t global[2] = {SIZE, SIZE};   // global domain size for our calculation
-  size_t local[2]  = {TILEX, TILEY}; // local domain size for our calculation
-  cl_int err;
-
-  for (unsigned it = 1; it <= nb_iter; it++) {
-    // Set kernel arguments
-    //
-    err = 0;
-    err |= clSetKernelArg (compute_kernel, 0, sizeof (cl_mem), &cur_buffer);
-    err |= clSetKernelArg(compute_kernel, 1, sizeof(cl_mem), &next_buffer);
-    err |= clSetKernelArg(compute_kernel, 2, sizeof(cl_mem), &changes_buffer);
-
-    check (err, "Failed to set kernel arguments");
-
-    err = clEnqueueNDRangeKernel (queue, compute_kernel, 2, NULL, global, local,
-                                  0, NULL, NULL);
-    check (err, "Failed to execute kernel");
-
-  }
-
-  return 0;
 }
 
 static unsigned couleur = 0xFFFF00FF; // Yellow
