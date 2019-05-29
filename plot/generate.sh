@@ -48,15 +48,6 @@ function speed_up_openmp {
     done
 }
 
-function speed_up_ocl {
-    for nbthreads in $(seq 1 20)
-    do
-        echo -n "$nbthreads "
-        cmd=$(command $kernel ocl $1 $iter $nbthreads $2)
-        eval $cmd |& grep -o "[0-9]*\.[0-9]*" | tr -d "\n"
-    done
-}
-
 function speed_up_openmp_conf {
     echo "set terminal png size 1200,800"
     echo "set output \"plot/speed_up_openmp$1$2.png\""
@@ -74,6 +65,21 @@ function speed_up_openmp_conf {
         index=$((index+1))
     done
     echo "$plt"
+}
+
+function speed_up_opencl {
+    for nbthreads in $(seq 1 20)
+    do
+        echo -n "$nbthreads "
+        cmd=$(command $kernel vie ocl $iter $nbthreads $1)
+        eval $cmd |& grep -o "[0-9]*\.[0-9]*" | tr -d "\n"
+    done
+}
+
+function speed_up_opencl_conf {
+    echo "set terminal png size 1200,800"
+    echo "set output \"plot/speed_up_opencl$1$2.png\""
+    echo "plot using 1:2 with lines"
 }
 
 plot_compare guns > plot/plot_compare.dat
@@ -96,5 +102,6 @@ speed_up_openmp 4096 guns > plot/speed_up_openmp.dat
 speed_up_openmp_conf 4096 guns > plot/speed_up_openmp.conf
 cat plot/speed_up_openmp.conf | gnuplot
 
-speed_up_ocl > plot/speed_up_ocl.dat
-cat plot/speed_up_ocl.dat | gnuplot
+speed_up_opencl > plot/speed_up_opencl.dat
+speed_up_opencl_conf 512 guns > plot/speed_up_opencl.conf
+cat plot/speed_up_opencl.dat | gnuplot
