@@ -5,7 +5,7 @@
 #define next_img(y, x) (*img_cell (alt_image, (y), (x)))
 #define change(y, x) (*img_cell (changes, (y+1), (x+1)))
 
-typedef Uint32 cell_t;
+typedef unsigned cell_t;
 
 #define OPTI
 
@@ -25,7 +25,7 @@ __kernel void vie(__global cell_t * image, __global cell_t * alt_image, __global
     unsigned tilex = get_local_id(0);
     unsigned tiley = get_local_id(1);
 
-    int need_compute = cur_changes(tiley, tilex) | cur_changes(tiley-1, tilex-1) | cur_changes(tiley, tilex-1) | cur_changes(tiley+1, tilex-1) | cur_changes(tiley-1, tilex) | cur_changes(tiley+1, tilex) | cur_changes(tiley-1, tilex+1) | cur_changes(tiley, tilex+1) | cur_changes(tiley+1, tilex+1);
+    int need_compute = change(tiley, tilex) | change(tiley-1, tilex-1) | change(tiley, tilex-1) | change(tiley+1, tilex-1) | change(tiley-1, tilex) | change(tiley+1, tilex) | change(tiley-1, tilex+1) | change(tiley, tilex+1) | change(tiley+1, tilex+1);
 
     if (need_compute) {
         barrier(CLK_LOCAL_MEM_FENCE);
