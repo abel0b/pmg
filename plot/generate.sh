@@ -10,7 +10,7 @@ iter=30
 export PLATFORM=1
 
 function command {
-    echo "OMP_NUM_THREADS=$5 ./2Dcomp -k $1 -v $2 -s $3 -i $4 -n -a $6"
+    echo "OMP_NUM_THREADS=$5 ./2Dcomp -k $1 -v $2 -s $3 -i $4 -n -a $6 -g 16"
 }
 
 function plot_compare {
@@ -42,7 +42,7 @@ function speed_up_openmp {
         do
             echo -n " "
             cmd=$(command $kernel $variant $1 $iter $nbthreads $2)
-            eval $cmd |& grep -o "[0-9]*\.[0-9]*" | tr -d "\n"
+            eval $cmd #|& grep -o "[0-9]*\.[0-9]*" | tr -d "\n"
         done
         echo
     done
@@ -71,7 +71,7 @@ function speed_up_opencl {
     for nbthreads in $(seq 1 20)
     do
         echo -n "$nbthreads "
-        cmd=$(command $kernel vie ocl $iter $nbthreads $1 $2)
+        cmd=$(command $kernel ocl $1 $iter $nbthreads $2)
         eval $cmd |& grep -o "[0-9]*\.[0-9]*"
     done
 }
